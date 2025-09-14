@@ -35,7 +35,6 @@ def find_files():
             files['mp3'][0] if files['mp3'] else None)
 
 def extract_chord_progression(chord_file):
-    """Извлекает гармоническую прогрессию"""
     if not chord_file:
         return None
     
@@ -59,7 +58,6 @@ def extract_chord_progression(chord_file):
                             chord_events.append((start_time, current_time, msg.note))
                             del active_chords[msg.note]
         
-        # Группируем одновременные ноты в аккорды
         chord_groups = defaultdict(list)
         for start, end, note in chord_events:
             chord_groups[start].append((note, end))
@@ -69,8 +67,8 @@ def extract_chord_progression(chord_file):
             notes = [note for note, end in chord_groups[start_time]]
             end_time = max(end for note, end in chord_groups[start_time])
             
-            if len(notes) >= 2:  # Минимум 2 ноты для аккорда
-                root_note = min(notes) % 12  # Основной тон
+            if len(notes) >= 2: 
+                root_note = min(notes) % 12 
                 chord_progression.append((start_time, end_time, root_note, notes))
         
         print(f"Гармонический анализ: {len(chord_progression)} аккордов")
@@ -90,10 +88,8 @@ def get_chord_at_time(chord_progression, time):
     return None
 
 def create_harmonic_mapping(root_note):
-    # Мажорная гамма от root_note
     major_scale = [(root_note + offset) % 12 for offset in [0, 2, 4, 5, 7, 9, 11]]
     
-    # Маппим первые 5 нот гаммы на фреты 0-4
     harmonic_map = {}
     for i, scale_note in enumerate(major_scale[:5]):
         harmonic_map[scale_note] = i
@@ -101,7 +97,6 @@ def create_harmonic_mapping(root_note):
     return harmonic_map
 
 def map_note_with_harmony(note, chord_progression, time, default_mapping):
-    """Маппит ноту с учетом гармонии"""
     chord_info = get_chord_at_time(chord_progression, time)
     
     if chord_info:
@@ -112,11 +107,9 @@ def map_note_with_harmony(note, chord_progression, time, default_mapping):
         if note_class in harmonic_map:
             return harmonic_map[note_class]
     
-    # Fallback к стандартному маппингу
     return default_mapping(note)
 
 def extract_melodyne_skeleton(melod_mid, melod_tempo):
-    """Извлекает точный скелет из Melodyne"""
     if not melod_mid:
         return None
     
@@ -134,7 +127,6 @@ def extract_melodyne_skeleton(melod_mid, melod_tempo):
         
         note_events.sort()
         
-        # Убираем одновременные ноты
         time_groups = defaultdict(list)
         for time, note, velocity, channel in note_events:
             time_groups[time].append((note, velocity, channel))
@@ -150,7 +142,6 @@ def extract_melodyne_skeleton(melod_mid, melod_tempo):
                 note, velocity, channel = best_note
                 cleaned_notes.append((time, note, velocity, channel))
         
-        # Получаем темп данные
         tempo_changes = []
         if melod_tempo:
             try:
@@ -162,7 +153,7 @@ def extract_melodyne_skeleton(melod_mid, melod_tempo):
                         if msg.type == 'set_tempo':
                             bpm = 60000000 / msg.tempo
                             tempo_changes.append((current_time, bpm, msg.tempo))
-                print(f"⏱️ Tempo данные: {len(tempo_changes)} изменений")
+                print(f"Tempo: {len(tempo_changes)} изменений")
             except:
                 pass
         
@@ -194,7 +185,6 @@ def extract_melodyne_skeleton(melod_mid, melod_tempo):
         return None
 
 def extract_neuralnote_notes(solo_mid):
-    """Извлекает все ноты из NeuralNote с очисткой"""
     if not solo_mid:
         return None
     
@@ -212,7 +202,6 @@ def extract_neuralnote_notes(solo_mid):
         
         all_note_events.sort()
         
-        # Убираем одновременные ноты
         time_groups = defaultdict(list)
         for time, note, velocity, channel in all_note_events:
             time_groups[time].append((note, velocity, channel))
@@ -237,7 +226,6 @@ def extract_neuralnote_notes(solo_mid):
                 note, velocity, channel = best_note
                 cleaned_notes.append((time, note, velocity, channel))
         
-        # Фильтруем по velocity
         if cleaned_notes:
             velocities = [vel for _, _, vel, _ in cleaned_notes]
             min_velocity = max(25, sum(velocities) / len(velocities) * 0.4)
@@ -255,7 +243,6 @@ def extract_neuralnote_notes(solo_mid):
         return None
 
 def calculate_safe_distance(melodyne_notes, ticks_per_beat):
-    """Вычисляет безопасное расстояние для добавления нот"""
     if len(melodyne_notes) < 2:
         return ticks_per_beat // 7
     
@@ -339,7 +326,7 @@ def process_hybrid_notes_with_harmony(hybrid_data, chord_progression):
     if not notes:
         return []
     
-    print(f"🎯 Гармоническая обработка: {len(notes)} нот")
+    print(f"Гармоническая обработка: {len(notes)} нот")
         all_notes = [note for _, note, _, _ in notes]
     note_counts = Counter(all_notes)
     min_note = min(all_notes)
@@ -374,10 +361,8 @@ def process_hybrid_notes_with_harmony(hybrid_data, chord_progression):
     ticks_per_beat = hybrid_data['ticks_per_beat']
     
     for i, (time, note, velocity, channel) in enumerate(notes):
-        # Используем гармонический маппинг если доступен
         target_fret = map_note_with_harmony(note, chord_progression, time, default_map_note_to_fret)
         
-        # Умное позиционирование (как раньше)
         if chart_notes:
             prev_time, prev_fret = chart_notes[-1]
             
@@ -532,145 +517,6 @@ def create_harmonic_chart(hybrid_data, chart_notes, output_file, song_name, arti
   MusicStream = "song.ogg"
 }}
 
-[SyncTrack]
-{{
-  0 = TS 4
-"""
-    
-    for time, bpm, tempo_microseconds in tempo_changes:
-        chart_content += f"  {time} = B {int(bpm * 1000)}\n"
-    
-    chart_content += """}\n\n[Events]
-{
-  0 = E "section Intro"
-"""
-    
-    for i, percentage in enumerate([25, 50, 75]):
-        section_time = (max_time * percentage) // 100
-        section_names = ["Verse", "Chorus", "Bridge"]
-        if i < len(section_names):
-            chart_content += f'  {section_time} = E "section {section_names[i]}"\n'
-    
-    chart_content += "}\n\n[ExpertSingle]\n{\n"
-    
-    for start_time, end_time in star_phrases:
-        chart_content += f"  {start_time} = S 2 0\n"
-        chart_content += f"  {end_time} = S 3 0\n"
-    
-    for time, fret in chart_notes:
-        chart_content += f"  {time} = N {fret} 0\n"
-    
-    chart_content += "}\n"
-    
-    with open(output_file, 'w', encoding='utf-8') as f:
-        f.write(chart_content)
-    
-    return difficulty
-
-def create_ini(output_dir, song_name, artist, difficulty):
-    ini_content = f"""[song]
-name = {song_name}
-artist = {artist}
-album = Unknown Album
-genre = rock
-year = 2024
-diff_band = -1
-diff_guitar = {difficulty}
-diff_rhythm = -1
-diff_bass = -1
-diff_drums = -1
-diff_keys = -1
-diff_guitarghl = -1
-diff_bassghl = -1
-preview_start_time = 0
-"""
-    
-    with open(os.path.join(output_dir, "song.ini"), 'w', encoding='utf-8') as f:
-        f.write(ini_content)
-
-def main():
-    print("=== ГАРМОНИЧЕСКИЙ MELODYNE + NEURALNOTE КОНВЕРТЕР ===")
-    
-    melod_mid, melod_tempo, solo_mid, chord_mid, vocal_file, instrumental_file = find_files()
-    
-    if not melod_mid and not solo_mid:
-        print("Нужен хотя бы один MIDI файл!")
-        return
-    
-    print("Извлечение данных...")
-    
-    melodyne_skeleton = extract_melodyne_skeleton(melod_mid, melod_tempo) if melod_mid else None
-    neuralnote_notes = extract_neuralnote_notes(solo_mid) if solo_mid else None
-    chord_progression = extract_chord_progression(chord_mid)
-    
-    if melodyne_skeleton and neuralnote_notes:
-        print("Гибридный + гармонический режим")
-        hybrid_data = find_gaps_and_fill(melodyne_skeleton, neuralnote_notes)
-    elif melodyne_skeleton:
-        print("Melodyne + гармонический режим")
-        hybrid_data = melodyne_skeleton
-        hybrid_data['added_count'] = 0
-        hybrid_data['skeleton_count'] = len(melodyne_skeleton['notes'])
-    elif neuralnote_notes:
-        print("NeuralNote + гармонический режим")
-        hybrid_data = {
-            'notes': neuralnote_notes['notes'],
-            'tempo_changes': [(0, 120.0, 500000)],
-            'ticks_per_beat': neuralnote_notes['ticks_per_beat'],
-            'max_time': max(note[0] for note in neuralnote_notes['notes']) if neuralnote_notes['notes'] else 0,
-            'added_count': len(neuralnote_notes['notes']),
-            'skeleton_count': 0
-        }
-    else:
-        print("Нет данных для обработки!")
-        return
-    
-    if not hybrid_data or not hybrid_data['notes']:
-        print("Нет нот для обработки")
-        return
-    
-    chart_notes = process_hybrid_notes_with_harmony(hybrid_data, chord_progression)
-    if not chart_notes:
-        print("Не удалось создать chart ноты")
-        return
-    
-    base_song_name = input("Название: ").strip() or "Harmonic Song"
-    if not base_song_name.lower().endswith('(vocal)') and '(vocal)' not in base_song_name.lower():
-        song_name = f"{base_song_name} (vocal)"
-    else:
-        song_name = base_song_name
-    
-    artist_name = input("Исполнитель: ").strip() or "Unknown Artist"
-    
-    song_folder = song_name.replace(' ', '_').replace('(', '').replace(')', '')
-    if not os.path.exists(song_folder):
-        os.makedirs(song_folder)
-    
-    chart_file = os.path.join(song_folder, "notes.chart")
-    
-    difficulty = create_harmonic_chart(hybrid_data, chart_notes, chart_file, song_name, artist_name)
-    
-    if difficulty:
-        create_ini(song_folder, song_name, artist_name, difficulty)
-        
-        audio_file = instrumental_file or vocal_file
-        if audio_file:
-            try:
-                import shutil
-                shutil.copy2(audio_file, os.path.join(song_folder, "song.ogg"))
-                print("Аудио скопировано")
-            except:
-                pass
-        
-        print(f"Гармонический chart создан: {song_folder}/")
-        print(f"Нот: {len(chart_notes)}, Сложность: {difficulty}")
-        
-        if 'skeleton_count' in hybrid_data and 'added_count' in hybrid_data:
-            skeleton_count = hybrid_data['skeleton_count']
-            added_count = hybrid_data['added_count']
-            print(f"Melodyne: {skeleton_count}, Neural: +{added_count}, Chords: {'✅' if chord_progression else '❌'}")
-    else:
-        print("Ошибка создания chart")
-
 if __name__ == "__main__":
     main()
+
