@@ -4,7 +4,7 @@ More specifically for exctracted voice parts and then add this as any instrument
 
 Step 1:
 First you need to extract vocal parts from the songs
-[Ultimate Vocal Remover(URV)](https://github.com/Anjok07/ultimatevocalremovergui)
+[Ultimate Vocal Remover(UVR)](https://github.com/Anjok07/ultimatevocalremovergui)
 after using this - you can extract vocal parts from song
 and save extracted vocal as .wav format
 
